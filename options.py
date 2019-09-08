@@ -26,7 +26,7 @@ def set_opts():
 
     # Cliping the Gradients Norm during the training
     # simulation: 1e3, 1e2
-    # SIDD: 1e4, 1e2
+    # SIDD: 1e5, 1e2
     parser.add_argument('--clip_grad_D', type=float, default=1e4,
                                              help="Cliping the gradients for D-Net, (default: 1e4)")
     parser.add_argument('--clip_grad_S', type=float, default=1e2,

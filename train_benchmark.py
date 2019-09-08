@@ -36,6 +36,7 @@ else:
 _C = 3
 _modes = ['train', 'test_SIDD']
 _lr_min = 1e-6
+_times_grad = 3
 
 def train_model(net, datasets, optimizer, lr_scheduler, criterion):
     clip_grad_D = args.clip_grad_D
@@ -73,9 +74,15 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                                                                            eps2, radius=args.radius)
 
             loss.backward()
-            total_norm_D = nn.utils.clip_grad_norm_(param_D, clip_grad_D)
-            total_norm_S = nn.utils.clip_grad_norm_(param_S, clip_grad_S)
+            # clip the gradient norm of D-Net
+            total_norm_D = nn.utils.clip_grad_norm_(param_D, clip_grad_D*_times_grad)
+            if total_norm_D > clip_grad_D * _times_grad:
+                _ = nn.utils.clip_grad_norm_(param_D, clip_grad_D)
             grad_norm_D = (grad_norm_D*(ii/(ii+1)) + total_norm_D/(ii+1))
+            # clip the gradient norm of S-Net
+            total_norm_S = nn.utils.clip_grad_norm_(param_S, clip_grad_S*_times_grad)
+            if total_norm_S > clip_grad_S * _times_grad:
+                _ = nn.utils.clip_grad_norm_(param_S, clip_grad_S)
             grad_norm_S = (grad_norm_S*(ii/(ii+1)) + total_norm_S/(ii+1))
             optimizer.step()
 
@@ -91,8 +98,8 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                                  'KLG={:+>7.2f}, KLIG={:+>6.2f}, mse={:.2e}, GD:{:.1e}/{:.1e}, ' + \
                                                                        'GS:{:.1e}/{:.1e}, lr={:.1e}'
                 print(log_str.format(epoch+1, args.epochs, phase, ii+1, num_iter_epoch[phase],
-                                         g_lh.item(), kl_g.item(), kl_Igam.item(), mse, clip_grad_D,
-                                                       total_norm_D, clip_grad_S, total_norm_S, lr))
+                             g_lh.item(), kl_g.item(), kl_Igam.item(), mse, clip_grad_D*_times_grad,
+                                           total_norm_D, clip_grad_S*_times_grad, total_norm_S, lr))
                 writer.add_scalar('Train Loss Iter', loss.item(), step)
                 writer.add_scalar('Train MSE Iter', mse, step)
                 step += 1
@@ -202,14 +209,26 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 
 def main():
     # move the model to GPU
-    net = VDN.VDNU(_C, wf=args.wf, activation=args.activation, act_init=args.relu_init)
+    if args.net.lower() == 'vdn':
+        net = VDN.VDNU(_C, args.activation, args.relu_init, wf=args.wf, batch_norm=args.bn_UNet)
+    elif args.net.lower() == 'vdnrd':
+        net = VDN.VDNRD(_C, args.activation, args.relu_init, num_RDB=args.num_RDB,
+                                               num_conv=args.num_conv, growth_rate=args.growth_rate)
+        clip_grad_D = 5e3
+    elif args.net.lower() == 'vdnrdu':
+        net = VDN.VDNRDU(_C, args.activation, args.relu_init, num_RDB=args.num_RDBU,
+                                                                 num_conv=args.num_conv, wf=args.wf)
+    else:
+        sys.exit('Please input the corrected network type')
     # multi GPU setting
     net = nn.DataParallel(net).cuda()
 
     # optimizer
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
-    print('\nStepLR with gamma={:.2f}, step size={:d}'.format(args.gamma, args.step_size))
-    scheduler = optim.lr_scheduler.StepLR(optimizer, args.step_size, args.gamma)
+    if args.net.lower() == 'vdn':
+        scheduler = optim.lr_scheduler.StepLR(optimizer, args.step_size, args.gamma)
+    else:
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, args.multi_steps, args.gamma)
 
     if args.resume:
         if os.path.isfile(args.resume):
@@ -241,12 +260,30 @@ def main():
     for arg in vars(args):
         print('{:<15s}: {:s}'.format(arg,  str(getattr(args, arg))))
 
-    # make dataset
+    # train dataset
+    path_Renoir_train = os.path.join(args.Renoir_dir, 'small_imgs_all.hdf5')
     path_SIDD_train = os.path.join(args.SIDD_dir, 'small_imgs_train.hdf5')
+    # test dataset
     path_SIDD_test = os.path.join(args.SIDD_dir, 'small_imgs_test.hdf5')
-    datasets = {'train':DenoisingDatasets.BenchmarkTrain(path_SIDD_train, 5000*args.batch_size,
-                      args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True),
-                                    'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
+    if args.data_case == 1:
+        dataset_Renoir_train = DenoisingDatasets.BenchmarkTrain(path_Renoir_train,
+                                          1500*args.batch_size, args.patch_size, radius=args.radius,
+                                                                eps2=args.eps2, noise_estimate=True)
+        dataset_SIDD_train = DenoisingDatasets.BenchmarkTrain(path_SIDD_train, 3500*args.batch_size,
+                           args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True)
+        datasets = {'train':uData.ConcatDataset((dataset_SIDD_train, dataset_Renoir_train)),
+                                        'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
+    elif args.data_case == 2:
+        datasets = {'train':DenoisingDatasets.BenchmarkTrain(path_SIDD_train, 5000*args.batch_size,
+                          args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True),
+                                        'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
+    elif args.data_case == 3:
+        datasets = {'train':DenoisingDatasets.BenchmarkTrain(path_Renoir_train,
+                                          5000*args.batch_size, args.patch_size, radius=args.radius,
+                                                               eps2=args.eps2, noise_estimate=True),
+                                        'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
+    else:
+        sys.exit('Please input the correct data case: 1, 2 and 3')
     # train model
     print('\nBegin training with GPU: ' + str(args.gpu_id))
     train_model(net, datasets, optimizer, scheduler, loss_fn)
