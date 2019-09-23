@@ -11,12 +11,10 @@ def set_opts():
                                                          help="Batchsize of training, (default:32)")
     parser.add_argument('--patch_size', type=int, default=128,
                                                    help="Patch size of data sample,  (default:128)")
-    parser.add_argument('--lr', type=float, default=1e-4,
-                                                  help="Initialized learning rate, (default: 1e-4)")
+    parser.add_argument('--lr', type=float, default=5e-4,
+                                                  help="Initialized learning rate, (default: 5e-4)")
     parser.add_argument('--gamma', type=float, default=0.5,
                                          help="Decaying rate for the learning rate, (default: 0.5)")
-    parser.add_argument('--step_size', type=int, default=10,
-                                     help="Step size for decaying the learning rate, (default: 10)")
     parser.add_argument('--epochs', type=int, default=100,
                                                    help="Number of training epochs, (default: 100)")
     parser.add_argument('-p', '--print_freq', type=int, default=100,
@@ -58,8 +56,8 @@ def set_opts():
     # hyper-parameters
     parser.add_argument('--eps2', default=1e-6, type=float,
                                                     help="Variance for prior of Z, (default: 1e-6)")
-    parser.add_argument('--radius', default=5, type=int,
-                                                help="Radius for the Gaussian filter, (default: 5)")
+    parser.add_argument('--radius', default=3, type=int,
+                                                help="Radius for the Gaussian filter, (default: 3)")
 
     # network architecture
     parser.add_argument('-a', '--activation', type=str, default='ReLU',
@@ -68,8 +66,6 @@ def set_opts():
                                        help="Initial value for LeakyReLU or PReLU, (default: 0.01)")
     parser.add_argument('--wf', type=int, default=64,
                                                    help="Initilized filters of UNet, (default: 64)")
-    parser.add_argument('--bn_UNet', action='store_true',
-                                                   help="Using batchnorm in UNet, (default: False)")
     args = parser.parse_args()
 
     return args

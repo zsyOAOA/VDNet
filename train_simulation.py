@@ -204,14 +204,14 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 def main():
     # build the model
     net = VDN.VDNU(args.chn, activation=args.activation, act_init=args.relu_init, wf=args.wf,
-                                                                            batch_norm=args.bn_UNet)
+                                                                                    batch_norm=True)
     # move the model to GPU
     net = nn.DataParallel(net).cuda()
 
     # optimizer
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
-    print('\nStepLR with gamma={:.2f}, step size={:d}'.format(args.gamma, args.step_size))
-    scheduler = optim.lr_scheduler.StepLR(optimizer, args.step_size, args.gamma)
+    args.milestones = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, args.milestones, args.gamma)
 
     if args.resume:
         if os.path.isfile(args.resume):

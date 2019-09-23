@@ -18,7 +18,6 @@ def loss_fn(out_denoise, out_sigma, im_noisy, im_gt, sigmaMap, eps2, radius=3):
     Input:
         radius: radius for guided filter in the Inverse Gamma prior
         eps2: variance of the Gaussian prior of Z
-        mask: (N,)  array
     '''
     C = im_gt.shape[1]
     p = 2*radius+1
@@ -28,8 +27,6 @@ def loss_fn(out_denoise, out_sigma, im_noisy, im_gt, sigmaMap, eps2, radius=3):
 
     # parameters predicted of Gaussain distribution
     out_denoise[:, C:,].clamp_(min=log_min, max=log_max)
-    # if err_clip:
-        # out_denoise[:, :C,].clamp_(min=err_min, max=err_max)
     err_mean = out_denoise[:, :C,]
     m2 = torch.exp(out_denoise[:, C:,])   # variance
 
@@ -43,19 +40,17 @@ def loss_fn(out_denoise, out_sigma, im_noisy, im_gt, sigmaMap, eps2, radius=3):
     # KL divergence for Gauss distribution
     m2_div_eps = torch.div(m2, eps2)
     err_mean_gt = im_noisy - im_gt
-    kl_gauss =  0.5*(err_mean-err_mean_gt)**2/eps2 + 0.5*(m2_div_eps - 1 - torch.log(m2_div_eps))
-    loss_kl_gauss = torch.mean(kl_gauss)
+    kl_gauss = 0.5 * torch.mean((err_mean-err_mean_gt)**2/eps2 + (m2_div_eps - 1 - torch.log(m2_div_eps)))
 
     # KL divergence for Inv-Gamma distribution
-    kl_Igamma = (alpha-alpha0)*torch.digamma(alpha) + (log_gamma(alpha0) - log_gamma(alpha)) + \
-                               alpha0*(log_beta - torch.log(beta0)) + beta0 * alpha_div_beta - alpha
-    loss_kl_Igamma = torch.mean(kl_Igamma)
+    kl_Igamma = torch.mean((alpha-alpha0)*torch.digamma(alpha) + (log_gamma(alpha0) - log_gamma(alpha))
+                           + alpha0*(log_beta - torch.log(beta0)) + beta0 * alpha_div_beta - alpha)
 
     # likelihood of im_gt
-    lh = 0.5 * log(2*pi) + 0.5 * (log_beta - torch.digamma(alpha)) + \
-                                                             0.5 * (err_mean**2+m2) * alpha_div_beta
-    loss_lh = torch.mean(lh)
+    lh = 0.5 * log(2*pi) + 0.5 * torch.mean((log_beta - torch.digamma(alpha)) + \
+                                                                 (err_mean**2+m2) * alpha_div_beta)
 
-    loss = loss_lh + loss_kl_gauss + loss_kl_Igamma
+    loss = lh + kl_gauss + kl_Igamma
 
-    return loss, loss_lh, loss_kl_gauss, loss_kl_Igamma
+    return loss, lh, kl_gauss, kl_Igamma
+

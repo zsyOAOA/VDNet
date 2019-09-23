@@ -90,7 +90,7 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
             loss_per_epoch['lh'] += g_lh.item() / num_iter_epoch[phase]
             loss_per_epoch['KLG'] += kl_g.item() / num_iter_epoch[phase]
             loss_per_epoch['KLIG'] += kl_Igam.item() / num_iter_epoch[phase]
-            im_denoise = im_noisy-phi_Z[:, :_C, ].detach().data
+            im_denoise = torch.clamp(im_noisy-phi_Z[:, :C, ].detach().data, 0.0, 1.0)
             mse = F.mse_loss(im_denoise, im_gt)
             mse_per_epoch[phase] += mse
             if (ii+1) % args.print_freq == 0:
@@ -141,12 +141,9 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                 with torch.set_grad_enabled(False):
                     phi_Z, phi_sigma = net(im_noisy, 'train')
 
-                im_denoise = im_noisy-phi_Z[:, :_C, ].detach().data
+                im_denoise = torch.clamp_(im_noisy-phi_Z[:, :_C, ].data, 0.0, 1.0)
                 mse = F.mse_loss(im_denoise, im_gt)
                 mse_per_epoch[phase] += mse
-                torch.clamp_(im_denoise, 0.0, 1.0)
-                if torch.isnan(im_denoise).sum() > 0:
-                    print('Denoising results contains Nan value')
                 psnr_iter = batch_PSNR(im_denoise, im_gt)
                 ssim_iter = batch_SSIM(im_denoise, im_gt)
                 psnr_per_epoch[phase] += psnr_iter
@@ -209,26 +206,14 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 
 def main():
     # move the model to GPU
-    if args.net.lower() == 'vdn':
-        net = VDN.VDNU(_C, args.activation, args.relu_init, wf=args.wf, batch_norm=args.bn_UNet)
-    elif args.net.lower() == 'vdnrd':
-        net = VDN.VDNRD(_C, args.activation, args.relu_init, num_RDB=args.num_RDB,
-                                               num_conv=args.num_conv, growth_rate=args.growth_rate)
-        clip_grad_D = 5e3
-    elif args.net.lower() == 'vdnrdu':
-        net = VDN.VDNRDU(_C, args.activation, args.relu_init, num_RDB=args.num_RDBU,
-                                                                 num_conv=args.num_conv, wf=args.wf)
-    else:
-        sys.exit('Please input the corrected network type')
+    net = VDN.VDNU(_C, args.activation, args.relu_init, wf=args.wf, batch_norm=True)
     # multi GPU setting
     net = nn.DataParallel(net).cuda()
 
     # optimizer
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
-    if args.net.lower() == 'vdn':
-        scheduler = optim.lr_scheduler.StepLR(optimizer, args.step_size, args.gamma)
-    else:
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, args.multi_steps, args.gamma)
+    args.milestones = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer, args.milestones, args.gamma)
 
     if args.resume:
         if os.path.isfile(args.resume):
@@ -242,13 +227,11 @@ def main():
             net.load_state_dict(checkpoint['model_state_dict'])
             args.clip_grad_D = checkpoint['grad_norm_D']
             args.clip_grad_S = checkpoint['grad_norm_S']
-            if args.activation.lower() == 'prelu':
-                clip_grad_D_relu = checkpoint['grad_norm_D_relu']
-                clip_grad_S_relu = checkpoint['grad_norm_S_relu']
             print('=> Loaded checkpoint {:s} (epoch {:d})'.format(args.resume, checkpoint['epoch']))
         else:
             sys.exit('Please provide corrected model path!')
     else:
+        net = VDN.weight_init_kaiming(net, args.activation)
         args.epoch_start = 0
         if os.path.isdir(args.log_dir):
             shutil.rmtree(args.log_dir)
@@ -261,29 +244,12 @@ def main():
         print('{:<15s}: {:s}'.format(arg,  str(getattr(args, arg))))
 
     # train dataset
-    path_Renoir_train = os.path.join(args.Renoir_dir, 'small_imgs_all.hdf5')
     path_SIDD_train = os.path.join(args.SIDD_dir, 'small_imgs_train.hdf5')
     # test dataset
     path_SIDD_test = os.path.join(args.SIDD_dir, 'small_imgs_test.hdf5')
-    if args.data_case == 1:
-        dataset_Renoir_train = DenoisingDatasets.BenchmarkTrain(path_Renoir_train,
-                                          1500*args.batch_size, args.patch_size, radius=args.radius,
-                                                                eps2=args.eps2, noise_estimate=True)
-        dataset_SIDD_train = DenoisingDatasets.BenchmarkTrain(path_SIDD_train, 3500*args.batch_size,
-                           args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True)
-        datasets = {'train':uData.ConcatDataset((dataset_SIDD_train, dataset_Renoir_train)),
-                                        'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
-    elif args.data_case == 2:
-        datasets = {'train':DenoisingDatasets.BenchmarkTrain(path_SIDD_train, 5000*args.batch_size,
-                          args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True),
-                                        'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
-    elif args.data_case == 3:
-        datasets = {'train':DenoisingDatasets.BenchmarkTrain(path_Renoir_train,
-                                          5000*args.batch_size, args.patch_size, radius=args.radius,
-                                                               eps2=args.eps2, noise_estimate=True),
-                                        'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
-    else:
-        sys.exit('Please input the correct data case: 1, 2 and 3')
+    datasets = {'train':DenoisingDatasets.BenchmarkTrain(path_SIDD_train, 5000*args.batch_size,
+                      args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True),
+                                    'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
     # train model
     print('\nBegin training with GPU: ' + str(args.gpu_id))
     train_model(net, datasets, optimizer, scheduler, loss_fn)
