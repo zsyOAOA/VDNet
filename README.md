@@ -1,5 +1,5 @@
 # VDNet
-# Variational Denoising Network: Toward Blind Noise Modeling and Removal (NeurIPS, 2019) [arXiv](https://arxiv.org/pdf/1908.11314.pdf)
+# Variational Denoising Network: Toward Blind Noise Modeling and Removal (NeurIPS, 2019) [arXiv](https://arxiv.org/pdf/1908.11314v2.pdf)
 # Requirements and Dependencies
 * Ubuntu 16.04, cuda 10.0
 * Python 3.6, Pytorch 1.1.0
