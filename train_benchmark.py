@@ -36,7 +36,6 @@ else:
 _C = 3
 _modes = ['train', 'test_SIDD']
 _lr_min = 1e-6
-_times_grad = 3
 
 def train_model(net, datasets, optimizer, lr_scheduler, criterion):
     clip_grad_D = args.clip_grad_D
@@ -75,14 +74,10 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 
             loss.backward()
             # clip the gradient norm of D-Net
-            total_norm_D = nn.utils.clip_grad_norm_(param_D, clip_grad_D*_times_grad)
-            if total_norm_D > clip_grad_D * _times_grad:
-                _ = nn.utils.clip_grad_norm_(param_D, clip_grad_D)
+            total_norm_D = nn.utils.clip_grad_norm_(param_D, clip_grad_D)
             grad_norm_D = (grad_norm_D*(ii/(ii+1)) + total_norm_D/(ii+1))
             # clip the gradient norm of S-Net
-            total_norm_S = nn.utils.clip_grad_norm_(param_S, clip_grad_S*_times_grad)
-            if total_norm_S > clip_grad_S * _times_grad:
-                _ = nn.utils.clip_grad_norm_(param_S, clip_grad_S)
+            total_norm_S = nn.utils.clip_grad_norm_(param_S, clip_grad_S)
             grad_norm_S = (grad_norm_S*(ii/(ii+1)) + total_norm_S/(ii+1))
             optimizer.step()
 
@@ -90,7 +85,8 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
             loss_per_epoch['lh'] += g_lh.item() / num_iter_epoch[phase]
             loss_per_epoch['KLG'] += kl_g.item() / num_iter_epoch[phase]
             loss_per_epoch['KLIG'] += kl_Igam.item() / num_iter_epoch[phase]
-            im_denoise = torch.clamp(im_noisy-phi_Z[:, :C, ].detach().data, 0.0, 1.0)
+            im_denoise = im_noisy-phi_Z[:, :_C, ].detach().data
+            im_denoise.clamp_(0.0, 1.0)
             mse = F.mse_loss(im_denoise, im_gt)
             mse_per_epoch[phase] += mse
             if (ii+1) % args.print_freq == 0:
@@ -98,8 +94,8 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                                  'KLG={:+>7.2f}, KLIG={:+>6.2f}, mse={:.2e}, GD:{:.1e}/{:.1e}, ' + \
                                                                        'GS:{:.1e}/{:.1e}, lr={:.1e}'
                 print(log_str.format(epoch+1, args.epochs, phase, ii+1, num_iter_epoch[phase],
-                             g_lh.item(), kl_g.item(), kl_Igam.item(), mse, clip_grad_D*_times_grad,
-                                           total_norm_D, clip_grad_S*_times_grad, total_norm_S, lr))
+                                         g_lh.item(), kl_g.item(), kl_Igam.item(), mse, clip_grad_D,
+                                                       total_norm_D, clip_grad_S, total_norm_S, lr))
                 writer.add_scalar('Train Loss Iter', loss.item(), step)
                 writer.add_scalar('Train MSE Iter', mse, step)
                 step += 1
@@ -107,7 +103,6 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                 alpha = torch.exp(phi_sigma[:, :_C,])
                 beta = torch.exp(phi_sigma[:, _C:,])
                 sigmaMap_pred = beta / (alpha-1)
-                torch.clamp_(im_denoise, 0.0, 1.0)
                 x1 = vutils.make_grid(im_denoise, normalize=True, scale_each=True)
                 writer.add_image(phase+' Denoised images', x1, step_img[phase])
                 x2 = vutils.make_grid(im_gt, normalize=True, scale_each=True)
@@ -141,7 +136,8 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                 with torch.set_grad_enabled(False):
                     phi_Z, phi_sigma = net(im_noisy, 'train')
 
-                im_denoise = torch.clamp_(im_noisy-phi_Z[:, :_C, ].data, 0.0, 1.0)
+                im_denoise = im_noisy-phi_Z[:, :_C, ].data
+                im_denoise.clamp_(0.0, 1.0)
                 mse = F.mse_loss(im_denoise, im_gt)
                 mse_per_epoch[phase] += mse
                 psnr_iter = batch_PSNR(im_denoise, im_gt)
@@ -206,13 +202,13 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 
 def main():
     # move the model to GPU
-    net = VDN.VDNU(_C, args.activation, args.relu_init, wf=args.wf, batch_norm=True)
+    net = VDN.VDNU(_C, wf=args.wf, batch_norm=False, activation=args.activation,
     # multi GPU setting
     net = nn.DataParallel(net).cuda()
 
     # optimizer
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
-    args.milestones = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+    args.milestones = [10, 20, 25, 30, 35, 40, 45, 50]
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, args.milestones, args.gamma)
 
     if args.resume:
@@ -248,8 +244,8 @@ def main():
     # test dataset
     path_SIDD_test = os.path.join(args.SIDD_dir, 'small_imgs_test.hdf5')
     datasets = {'train':DenoisingDatasets.BenchmarkTrain(path_SIDD_train, 5000*args.batch_size,
-                      args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True),
-                                    'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
+                          args.patch_size, radius=args.radius, eps2=args.eps2, noise_estimate=True),
+                                        'test_SIDD':DenoisingDatasets.BenchmarkTest(path_SIDD_test)}
     # train model
     print('\nBegin training with GPU: ' + str(args.gpu_id))
     train_model(net, datasets, optimizer, scheduler, loss_fn)
