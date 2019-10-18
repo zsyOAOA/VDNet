@@ -21,7 +21,7 @@ dep_U = 4
 # load the pretrained model
 print('Loading the Model')
 checkpoint = torch.load('./model_state/model_state_SIDD')
-net = VDN.VDNU(C, dep_U=dep_U, wf=64, batch_norm=True)
+net = VDN.VDNU(C, dep_U=dep_U, wf=64)
 if use_gpu:
     net = torch.nn.DataParallel(net).cuda()
     net.load_state_dict(checkpoint)

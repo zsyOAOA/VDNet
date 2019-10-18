@@ -25,7 +25,7 @@ im_list = [str(x) for x in data_path.glob('*.png')]
 # load the pretrained model
 print('Loading the Model')
 checkpoint = torch.load('./model_state/model_state_niidgauss')
-net = VDN.VDNU(C, dep_U=dep_U, wf=64, batch_norm=True)
+net = VDN.VDNU(C, dep_U=dep_U, wf=64)
 if use_gpu:
     net = torch.nn.DataParallel(net).cuda()
     net.load_state_dict(checkpoint)

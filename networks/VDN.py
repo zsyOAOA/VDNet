@@ -18,14 +18,11 @@ def weight_init_kaiming(net):
     return net
 
 class VDNU(nn.Module):
-    def __init__(self, in_channels, activation='relu', act_init=0.01, wf=64, dep_S=5, dep_U=4,
-                                                                                   batch_norm=True):
+    def __init__(self, in_channels, wf=64, dep_S=5, dep_U=4, slope=0.2):
         super(VDNU, self).__init__()
-        net1 = UNet(in_channels, in_channels*2, wf=wf, depth=dep_U, batch_norm=batch_norm,
-                                                           activation=activation, act_init=act_init)
+        net1 = UNet(in_channels, in_channels*2, wf=wf, depth=dep_U, slope=slope)
         self.DNet = weight_init_kaiming(net1)
-        net2 = DnCNN(in_channels, in_channels*2, dep=dep_S, num_filters=64, activation=activation,
-                                                                                  act_init=act_init)
+        net2 = DnCNN(in_channels, in_channels*2, dep=dep_S, num_filters=64, slope=slope)
         self.SNet = weight_init_kaiming(net2)
 
     def forward(self, x, mode='train'):

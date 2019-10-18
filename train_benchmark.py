@@ -202,7 +202,7 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 
 def main():
     # move the model to GPU
-    net = VDN.VDNU(_C, wf=args.wf, batch_norm=False, activation=args.activation,
+    net = VDN.VDNU(_C, wf=args.wf)
     # multi GPU setting
     net = nn.DataParallel(net).cuda()
 

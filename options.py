@@ -60,10 +60,6 @@ def set_opts():
                                                 help="Radius for the Gaussian filter, (default: 3)")
 
     # network architecture
-    parser.add_argument('-a', '--activation', type=str, default='ReLU',
-                             help="Nonlinear activation: ReLU, LeakyReLU and PReLU, (default:ReLU)")
-    parser.add_argument('--relu_init', type=float, default=0.01,
-                                       help="Initial value for LeakyReLU or PReLU, (default: 0.01)")
     parser.add_argument('--wf', type=int, default=64,
                                                    help="Initilized filters of UNet, (default: 64)")
     args = parser.parse_args()

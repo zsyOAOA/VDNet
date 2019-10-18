@@ -7,19 +7,6 @@ import torch.nn as nn
 import sys
 import torch.nn.functional as F
 
-def activation_set(mode, init, in_chn):
-    if mode.lower() == 'relu':
-        return nn.ReLU(inplace=True)
-    elif mode.lower() == 'leakyrelu':
-        return nn.LeakyReLU(init, inplace=True)
-    elif mode.lower() == 'prelu':
-        if in_chn is None:
-            return nn.PReLU(init=init)
-        else:
-            return nn.PReLU(in_chn, init)
-    else:
-        sys.exit('Please input teh corrected activation type: ReLU, LeakyReLU or PReLU')
-
 def conv3x3(in_chn, out_chn, bias=True):
     layer = nn.Conv2d(in_chn, out_chn, kernel_size=3, stride=1, padding=1, bias=bias)
     return layer

@@ -6,11 +6,10 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-from .SubBlocks import conv3x3, activation_set
+from .SubBlocks import conv3x3
 
 class UNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=6, depth=4, wf=64, batch_norm=False,
-                                                                  activation='relu', act_init=0.01):
+    def __init__(self, in_channels=3, out_channels=6, depth=4, wf=64, slope=0.2):
         """
         Reference:
         Ronneberger O., Fischer P., Brox T. (2015) U-Net: Convolutional Networks for Biomedical
@@ -21,21 +20,18 @@ class UNet(nn.Module):
             in_channels (int): number of input channels, Default 3
             depth (int): depth of the network, Default 4
             wf (int): number of filters in the first layer, Default 32
-            batch_norm (bool): Use BatchNorm after layers with an activation function
         """
         super(UNet, self).__init__()
         self.depth = depth
         prev_channels = in_channels
         self.down_path = nn.ModuleList()
         for i in range(depth):
-            self.down_path.append(UNetConvBlock(prev_channels, (2**i)*wf, batch_norm, activation,
-                                                                                          act_init))
+            self.down_path.append(UNetConvBlock(prev_channels, (2**i)*wf, slope))
             prev_channels = (2**i) * wf
 
         self.up_path = nn.ModuleList()
         for i in reversed(range(depth - 1)):
-            self.up_path.append(UNetUpBlock(prev_channels, (2**i)*wf, batch_norm, activation,
-                                                                                          act_init))
+            self.up_path.append(UNetUpBlock(prev_channels, (2**i)*wf, slope))
             prev_channels = (2**i)*wf
 
         self.last = conv3x3(prev_channels, out_channels, bias=True)
@@ -54,17 +50,15 @@ class UNet(nn.Module):
         return self.last(x)
 
 class UNetConvBlock(nn.Module):
-    def __init__(self, in_size, out_size, batch_norm, activation, act_init):
+    def __init__(self, in_size, out_size, slope=0.2):
         super(UNetConvBlock, self).__init__()
         block = []
 
         block.append(nn.Conv2d(in_size, out_size, kernel_size=3, padding=1, bias=True))
-        block.append(activation_set(activation, act_init, None))
+        block.append(nn.LeakyReLU(slope, inplace=True))
 
         block.append(nn.Conv2d(out_size, out_size, kernel_size=3, padding=1, bias=True))
-        if batch_norm:
-            block.append(nn.BatchNorm2d(out_size))
-        block.append(activation_set(activation, act_init, None))
+        block.append(nn.LeakyReLU(slope, inplace=True))
 
         self.block = nn.Sequential(*block)
 
@@ -73,10 +67,10 @@ class UNetConvBlock(nn.Module):
         return out
 
 class UNetUpBlock(nn.Module):
-    def __init__(self, in_size, out_size, batch_norm, activation, act_init):
+    def __init__(self, in_size, out_size, slope=0.2):
         super(UNetUpBlock, self).__init__()
         self.up = nn.ConvTranspose2d(in_size, out_size, kernel_size=2, stride=2, bias=True)
-        self.conv_block = UNetConvBlock(in_size, out_size, batch_norm, activation, act_init)
+        self.conv_block = UNetConvBlock(in_size, out_size, slope)
 
     def center_crop(self, layer, target_size):
         _, _, layer_height, layer_width = layer.size()
