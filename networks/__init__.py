@@ -4,7 +4,7 @@
 
 from .DnCNN import DnCNN
 from .UNet import UNet
-from . import VDN
+from .VDN import VDN
 
 
 

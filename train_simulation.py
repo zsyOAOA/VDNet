@@ -84,8 +84,9 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
             loss_per_epoch['lh'] += g_lh.item() / num_iter_epoch[phase]
             loss_per_epoch['KLG'] += kl_g.item() / num_iter_epoch[phase]
             loss_per_epoch['KLIG'] += kl_Igam.item() / num_iter_epoch[phase]
-            im_denoise = torch.clamp(im_noisy-phi_Z[:, :C, ].detach().data, 0.0, 1.0)
+            im_denoise = im_noisy-phi_Z[:, :C, ].detach().data
             mse = F.mse_loss(im_denoise, im_gt)
+            im_denoise.clamp_(0.0, 1.0)
             mse_per_epoch[phase] += mse
             if (ii+1) % args.print_freq == 0:
                 log_str = '[Epoch:{:>2d}/{:<2d}] {:s}:{:0>4d}/{:0>4d}, lh={:+4.2f}, ' + \
@@ -203,13 +204,13 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 
 def main():
     # build the model
-    net = VDN.VDNU(args.chn, wf=args.wf)
+    net = VDN(args.chn, slope=args.slope, wf=args.wf, dep_U=args.depth)
     # move the model to GPU
     net = nn.DataParallel(net).cuda()
 
     # optimizer
     optimizer = optim.Adam(net.parameters(), lr=args.lr)
-    args.milestones = [10, 15, 20, 25, 30, 35, 40, 45, 50]
+    args.milestones = [10, 20, 25, 30, 35, 40, 45, 50]
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, args.milestones, args.gamma)
 
     if args.resume:
@@ -257,7 +258,7 @@ def main():
     test_im_list = (Path('test_data') / 'CBSD68').glob('*.png')
     test_im_list = sorted([str(x) for x in test_im_list])
     datasets = {'train':DenoisingDatasets.SimulateTrain(train_im_list, 5000*args.batch_size,
-        args.patch_size, radius=5, noise_type=args.noise, noise_estimate=True, chn=args.chn),
+     args.patch_size, radius=args.radius, noise_type=args.noise, noise_estimate=True, chn=args.chn),
           'test_cbsd681':DenoisingDatasets.SimulateTest(test_im_list, test_case1_h5, chn=args.chn),
           'test_cbsd682': DenoisingDatasets.SimulateTest(test_im_list, test_case2_h5, chn=args.chn),
           'test_cbsd683': DenoisingDatasets.SimulateTest(test_im_list, test_case3_h5, chn=args.chn)}
