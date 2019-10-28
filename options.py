@@ -36,9 +36,6 @@ def set_opts():
                                               help="Path to save the SIDD dataset, (default: None)")
     parser.add_argument('--simulate_dir', default='/ssd1t/simulation/train', type=str,
                                     metavar='PATH', help="Path to save the images, (default: None)")
-    parser.add_argument('--chn', type=int, default=3, help="Channels of input image, (default:3)")
-    parser.add_argument('--noise', type=str, default='NIIDGauss',
-                        help="Noise type of simulation: NIIDGauss or IIDGauss, (default:NIIDGauss)")
 
     # model and log saving
     parser.add_argument('--log_dir', default='./log', type=str, metavar='PATH',

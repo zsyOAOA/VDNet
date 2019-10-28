@@ -34,11 +34,11 @@ if isinstance(args.gpu_id, int):
 else:
     os.environ['CUDA_VISIBLE_DEVICES'] = ','.join(str(x) for x in list(args.gpu_id))
 
+_C = 3
 _lr_min = 1e-6
 _modes = ['train', 'test_cbsd681', 'test_cbsd682', 'test_cbsd683']
 
 def train_model(net, datasets, optimizer, lr_scheduler, criterion):
-    C = args.chn
     clip_grad_D = args.clip_grad_D
     clip_grad_S = args.clip_grad_S
     batch_size = {'train': args.batch_size, 'test_cbsd681': 1, 'test_cbsd682': 1, 'test_cbsd683': 1}
@@ -84,7 +84,7 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
             loss_per_epoch['lh'] += g_lh.item() / num_iter_epoch[phase]
             loss_per_epoch['KLG'] += kl_g.item() / num_iter_epoch[phase]
             loss_per_epoch['KLIG'] += kl_Igam.item() / num_iter_epoch[phase]
-            im_denoise = im_noisy-phi_Z[:, :C, ].detach().data
+            im_denoise = im_noisy-phi_Z[:, :_C, ].detach().data
             mse = F.mse_loss(im_denoise, im_gt)
             im_denoise.clamp_(0.0, 1.0)
             mse_per_epoch[phase] += mse
@@ -101,8 +101,8 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                 writer.add_scalar('Gradient Norm_S Iter', total_norm_S, step)
                 step += 1
             if (ii+1) % (20*args.print_freq) == 0:
-                alpha = torch.exp(phi_sigma[:, :C, ])
-                beta = torch.exp(phi_sigma[:, C:, ])
+                alpha = torch.exp(phi_sigma[:, :_C, ])
+                beta = torch.exp(phi_sigma[:, _C:, ])
                 sigmaMap_pred = beta / (alpha-1)
                 x1 = vutils.make_grid(im_denoise, normalize=True, scale_each=True)
                 writer.add_image(phase+' Denoised images', x1, step_img[phase])
@@ -139,7 +139,7 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                 with torch.set_grad_enabled(False):
                     phi_Z, phi_sigma = net(im_noisy, 'train')
 
-                im_denoise = torch.clamp(im_noisy-phi_Z[:, :C, ].detach().data, 0.0, 1.0)
+                im_denoise = torch.clamp(im_noisy-phi_Z[:, :_C, ].detach().data, 0.0, 1.0)
                 mse = F.mse_loss(im_denoise, im_gt)
                 mse_per_epoch[phase] += mse
                 psnr_iter = batch_PSNR(im_denoise, im_gt)
@@ -153,8 +153,8 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
                     print(log_str.format(epoch+1, args.epochs, phase, ii+1, num_iter_epoch[phase],
                                                                          mse, psnr_iter, ssim_iter))
                 # tensorboardX summary
-                    alpha = torch.exp(phi_sigma[:, :C, ])
-                    beta = torch.exp(phi_sigma[:, C:, ])
+                    alpha = torch.exp(phi_sigma[:, :_C, ])
+                    beta = torch.exp(phi_sigma[:, _C:, ])
                     sigmaMap_pred = beta / (alpha-1)
                     x1 = vutils.make_grid(im_denoise, normalize=True, scale_each=True)
                     writer.add_image(phase+' Denoised images', x1, step_img[phase])
@@ -204,7 +204,7 @@ def train_model(net, datasets, optimizer, lr_scheduler, criterion):
 
 def main():
     # build the model
-    net = VDN(args.chn, slope=args.slope, wf=args.wf, dep_U=args.depth)
+    net = VDN(_C, slope=args.slope, wf=args.wf, dep_U=args.depth)
     # move the model to GPU
     net = nn.DataParallel(net).cuda()
 
@@ -247,21 +247,16 @@ def main():
                                                                     list(simulate_dir.glob('*.bmp'))
     train_im_list = sorted([str(x) for x in train_im_list])
     # making tesing data
-    if args.chn == 3:
-        test_case1_h5 = Path('test_data').joinpath('noise_niid_Color', 'CBSD68_niid_case1.hdf5')
-        test_case2_h5 = Path('test_data').joinpath('noise_niid_Color', 'CBSD68_niid_case2.hdf5')
-        test_case3_h5 = Path('test_data').joinpath('noise_niid_Color', 'CBSD68_niid_case3.hdf5')
-    elif args.chn == 1:
-        test_case1_h5 = Path('test_data').joinpath('noise_niid_Gray', 'CBSD68_niid_case1.hdf5')
-        test_case2_h5 = Path('test_data').joinpath('noise_niid_Gray', 'CBSD68_niid_case2.hdf5')
-        test_case3_h5 = Path('test_data').joinpath('noise_niid_Gray', 'CBSD68_niid_case3.hdf5')
+    test_case1_h5 = Path('test_data').joinpath('noise_niid', 'CBSD68_niid_case1.hdf5')
+    test_case2_h5 = Path('test_data').joinpath('noise_niid', 'CBSD68_niid_case2.hdf5')
+    test_case3_h5 = Path('test_data').joinpath('noise_niid', 'CBSD68_niid_case3.hdf5')
     test_im_list = (Path('test_data') / 'CBSD68').glob('*.png')
     test_im_list = sorted([str(x) for x in test_im_list])
     datasets = {'train':DenoisingDatasets.SimulateTrain(train_im_list, 5000*args.batch_size,
-     args.patch_size, radius=args.radius, noise_type=args.noise, noise_estimate=True, chn=args.chn),
-          'test_cbsd681':DenoisingDatasets.SimulateTest(test_im_list, test_case1_h5, chn=args.chn),
-          'test_cbsd682': DenoisingDatasets.SimulateTest(test_im_list, test_case2_h5, chn=args.chn),
-          'test_cbsd683': DenoisingDatasets.SimulateTest(test_im_list, test_case3_h5, chn=args.chn)}
+                                          args.patch_size, radius=args.radius, noise_estimate=True),
+                         'test_cbsd681':DenoisingDatasets.SimulateTest(test_im_list, test_case1_h5),
+                        'test_cbsd682': DenoisingDatasets.SimulateTest(test_im_list, test_case2_h5),
+                        'test_cbsd683': DenoisingDatasets.SimulateTest(test_im_list, test_case3_h5)}
     # train model
     print('\nBegin training with GPU: ' + str(args.gpu_id))
     train_model(net, datasets, optimizer, scheduler, loss_fn)

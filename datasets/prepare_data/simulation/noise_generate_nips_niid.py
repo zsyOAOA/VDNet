@@ -13,10 +13,6 @@ import h5py as h5
 from pathlib import Path
 import argparse
 
-parser = argparse.ArgumentParser(prog='Generate Noisy Data', description='optional parameters')
-parser.add_argument('--chn', default=3, type=int,
-                                               help="number of channels of the image, (default: 3)")
-args = parser.parse_args()
 base_path = Path('test_data')
 seed = 10000
 
@@ -38,10 +34,7 @@ for data_name in ['LIVE1', 'Set5', 'CBSD68']:
         print('Case {:d} of Dataset {:s}: {:d} images'.format(jj+1, data_name, len(im_list)))
         # generate sigmaMap
         sigma = sigma_min + (sigma-sigma.min())/(sigma.max()-sigma.min()) * (sigma_max-sigma_min)
-        if args.chn == 3:
-            noise_dir = base_path / 'noise_niid_Color'
-        elif args.chn == 1:
-            noise_dir = base_path / 'noise_niid_Gray'
+        noise_dir = base_path / 'noise_niid'
         if not noise_dir.is_dir():
             noise_dir.mkdir()
         h5_path = noise_dir.joinpath(data_name + '_niid_case' + str(jj+1) + '.hdf5')
@@ -50,11 +43,7 @@ for data_name in ['LIVE1', 'Set5', 'CBSD68']:
         with h5.File(h5_path) as h5_file:
             for ii, im_name in enumerate(im_list):
                 gt_name = str(base_path / data_name / im_name)
-                im_gt = cv2.imread(gt_name, 1)
-                if args.chn == 3:
-                    im_gt = im_gt[:,:,::-1]
-                elif args.chn == 1:
-                    im_gt = cv2.cvtColor(im_gt, cv2.COLOR_BGR2GRAY)[..., np.newaxis]
+                im_gt = cv2.imread(gt_name, 1)[:, :, ::-1]
                 H, W, C = im_gt.shape
                 H -= int(H % pow(2, dep_U))
                 W -= int(W % pow(2, dep_U))
@@ -67,5 +56,4 @@ for data_name in ['LIVE1', 'Set5', 'CBSD68']:
                 data = np.concatenate((noise, sigma[:,:,np.newaxis]), axis=2)
                 h5_file.create_dataset(name=im_name.split('.')[0], dtype=data.dtype,
                                                                         shape=data.shape, data=data)
-
 
