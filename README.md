@@ -1,3 +1,4 @@
+# VDN
 # Variational Denoising Network: Toward Blind Noise Modeling and Removal (NeurIPS, 2019) [arXiv](https://arxiv.org/pdf/1908.11314v2.pdf)
 # Requirements and Dependencies
 * Ubuntu 16.04, cuda 10.0
@@ -14,29 +15,28 @@ of variance maps are shown in the following:
 
 <img src="./figs/sigmaMap.png" align=center />
 
-* Testing our trained model, please run the demo:
+* Testing
 ```
     python demo_test_simulation.py
 ```
-  and get the following denoising results:
 
 <img src="./figs/simulation.png" align=center />
 
-* If you want to re-train our model, please follow these three steps:
+* Training
 
-    1. Download the source images from the above links.
-    2. Prepare the testing datasets:
-    ```
-        python datasets/prepare_data/simulation/noise_generate_nips_niid.py
-    ```
-    3. Training:
-    ```
-        python train_simulation.py --simulate_dir source_imgs_path --eps2 5e-5
-    ```
+1. Download the source images from the above links.
+2. Prepare the testing datasets:
+```
+    python datasets/prepare_data/simulation/noise_generate_nips_niid.py
+```
+3. Training:
+```
+    python train_simulation.py --simulate_dir source_imgs_path --eps2 5e-5
+```
 
 ## Real-world Noise Removal
 
-The real-world denoiser was trained using the [SIDD Medium Dataset](https://www.eecs.yorku.ca/~kamel/sidd/dataset.php). For re-training VDN, follow these steps:
+The real-world VDN denoiser was trained on the [SIDD Medium Dataset](https://www.eecs.yorku.ca/~kamel/sidd/dataset.php). For re-training VDN, follow these steps:
 1. Download the [training](ftp://sidd_user:sidd_2018@130.63.97.225/SIDD_Medium_Srgb.zip) and validation([noisy](ftp://sidd_user:sidd_2018@130.63.97.225/SIDD_Blocks/ValidationNoisyBlocksSrgb.mat), [groundtruth](ftp://sidd_user:sidd_2018@130.63.97.225/SIDD_Blocks/ValidationGtBlocksSrgb.mat)) datasets, and put the unzipped training
 dataset and the validation dataset into the floder "sidd_data_path".
 
@@ -46,5 +46,7 @@ dataset and the validation dataset into the floder "sidd_data_path".
     python datasets/prepare_data/SIDD/big2small_test.py --data_dir sidd_data_path
 ```
 3. Training:
+```
     python train_simulation.py --SIDD_dir sidd_data_path --eps2 1e-6
+```
 
