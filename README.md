@@ -20,7 +20,7 @@ of variance maps are shown in the following:
 ```
   and get the following denoising results:
 
-<img src="./figs/simulation.eps" align=center />
+<img src="./figs/simulation.png" align=center />
 
 * If you want to re-train our model, please follow these three steps:
 
