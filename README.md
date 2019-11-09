@@ -42,6 +42,8 @@ The real-world VDN denoiser was trained on the [SIDD Medium Dataset](https://www
     python demo_test_benchmark.py
 ```
 
+<img src="./figs/DND_denoise.png" align=center />
+
 ### Training:
 1. Download the [training](ftp://sidd_user:sidd_2018@130.63.97.225/SIDD_Medium_Srgb.zip) and validation([noisy](ftp://sidd_user:sidd_2018@130.63.97.225/SIDD_Blocks/ValidationNoisyBlocksSrgb.mat), [groundtruth](ftp://sidd_user:sidd_2018@130.63.97.225/SIDD_Blocks/ValidationGtBlocksSrgb.mat)) datasets, and put the unzipped training
 dataset and the validation dataset into the floder "sidd_data_path".
