@@ -11,12 +11,14 @@
 and the variance map of the noise was generated with Gaussian kernel. However, in order to test the generalization of our model,
 three different variance maps were adopted to generate the noisy images of the three groups of testing datasets. The four kinds
 of variance maps are shown in the following:
-<img src="./figs/sigmaMap.pdf" align=center />
+<img src="./figs/sigmaMap.png" align=center />
 
 * Testing our trained model, please run the demo:
+```
     python demo_test_simulation.py
+```
   and get the following denoising results:
-<img sre="./figs/simulation.pdf" align=center />
+<img sre="./figs/simulation.png" align=center />
 
 * If you want to re-train our model, please follow these three steps:
 
