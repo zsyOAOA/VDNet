@@ -11,16 +11,14 @@ from networks import VDN
 from skimage.measure import compare_psnr, compare_ssim
 from skimage import img_as_float, img_as_ubyte
 from pathlib import Path
-from utils import peaks, load_state_dict_cpu
+from utils import peaks, sincos_kernel, generate_gauss_kernel_mix, load_state_dict_cpu
 from matplotlib import pyplot as plt
 import time
 
 use_gpu = False
+case = 2
 C = 3
 dep_U = 4
-data_path = Path('test_data') / 'CBSD68'
-
-im_list = [str(x) for x in data_path.glob('*.png')]
 
 # load the pretrained model
 print('Loading the Model')
@@ -33,7 +31,8 @@ else:
     load_state_dict_cpu(net, checkpoint)
 net.eval()
 
-im_path = im_list[np.random.randint(0, len(im_list))]
+# im_path = str(Path('test_data') / 'CBSD68' / '101087.png')
+im_path = str(Path('test_data') / 'CBSD68' / '285079.png')
 im_name = im_path.split('/')[-1]
 im_gt = img_as_float(cv2.imread(im_path)[:, :, ::-1])
 H, W, _ = im_gt.shape
@@ -43,8 +42,19 @@ if W % 2**dep_U != 0:
     W -= W % 2**dep_U
 im_gt = im_gt[:H, :W, ]
 
-# generated the NIID Gaussian Noise
-sigma = peaks(256)
+# Generate the sigma map
+if case == 1:
+    # Test case 1
+    sigma = peaks(256)
+elif case == 2:
+    # Test case 2
+    sigma = sincos_kernel()
+elif case == 3:
+    # Test case 3
+    sigma = generate_gauss_kernel_mix(256, 256)
+else:
+    sys.exit('Please input the corrected test case: 1, 2 or 3')
+
 sigma = 10/255.0 + (sigma-sigma.min())/(sigma.max()-sigma.min()) * ((75-10)/255.0)
 sigma = cv2.resize(sigma, (W, H))
 noise = np.random.randn(H, W, C) * sigma[:, :, np.newaxis]
@@ -87,3 +97,4 @@ plt.subplot(133)
 plt.imshow(im_denoise)
 plt.title('Denoised Image')
 plt.show()
+

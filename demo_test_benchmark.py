@@ -29,7 +29,7 @@ else:
     load_state_dict_cpu(net, checkpoint)
 net.eval()
 
-im_noisy = loadmat('./test_data/DND/1.mat')['im_noisy']
+im_noisy = loadmat('./test_data/DND/1.mat')['InoisySRGB']
 H, W, _ = im_noisy.shape
 if H % 2**dep_U != 0:
     H -= H % 2**dep_U
