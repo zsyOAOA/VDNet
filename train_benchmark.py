@@ -227,7 +227,7 @@ def main():
         else:
             sys.exit('Please provide corrected model path!')
     else:
-        net = VDN.weight_init_kaiming(net, args.activation)
+        net = weight_init_kaiming(net)
         args.epoch_start = 0
         if os.path.isdir(args.log_dir):
             shutil.rmtree(args.log_dir)

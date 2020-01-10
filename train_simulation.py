@@ -13,7 +13,7 @@ from utils import batch_PSNR, batch_SSIM
 from tensorboardX import SummaryWriter
 from math import ceil
 from loss import loss_fn
-from networks import VDN
+from networks import VDN, weight_init_kaiming
 from datasets import DenoisingDatasets
 import torch.optim as optim
 import torch.nn.functional as F
@@ -229,6 +229,7 @@ def main():
         else:
             sys.exit('Please provide corrected model path!')
     else:
+        net = weight_init_kaiming(net)
         args.epoch_start = 0
         if os.path.isdir(args.log_dir):
             shutil.rmtree(args.log_dir)

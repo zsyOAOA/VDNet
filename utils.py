@@ -12,6 +12,21 @@ import numpy as np
 import sys
 from math import floor
 
+def ssim_index(im1, im2):
+    '''
+    Input:
+        im1, im2: np.uint8 format
+    '''
+    if im1.ndim == 2:
+        out = compare_ssim(im1, im2, data_range=255, gaussian_weights=True,
+                                                    use_sample_covariance=False, multichannel=False)
+    elif im1.ndim == 3:
+        out = compare_ssim(im1, im2, data_range=255, gaussian_weights=True,
+                                                     use_sample_covariance=False, multichannel=True)
+    else:
+        sys.exit('Please input the corrected images')
+    return out
+
 def im2patch(im, pch_size, stride=1):
     '''
     Transform image to patches.
@@ -65,8 +80,7 @@ def batch_SSIM(img, imclean):
     Iclean = img_as_ubyte(Iclean)
     SSIM = 0
     for i in range(Img.shape[0]):
-        SSIM += compare_ssim(Iclean[i,:,:,:].transpose((1,2,0)), Img[i,:,:,:].transpose((1,2,0)),
-                              win_size=11, data_range=255, multichannel=True, gaussian_weight=True)
+        SSIM += ssim_index(Iclean[i,:,:,:].transpose((1,2,0)), Img[i,:,:,:].transpose((1,2,0)))
     return (SSIM/Img.shape[0])
 
 def peaks(n):
@@ -119,6 +133,13 @@ def sincos_kernel():
     # [xx, yy] = np.meshgrid(np.linspace(1, 10, 256), np.linspace(-10, 15, 256))
     zz = np.sin(xx) + np.cos(yy)
     return zz
+
+def capacity_cal(net):
+    out = 0
+    for param in net.parameters():
+        out += param.numel()*4/1024/1024
+    # print('Networks Parameters: {:.2f}M'.format(out))
+    return out
 
 class LogGamma(autoF):
     '''
