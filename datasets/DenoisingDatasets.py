@@ -133,7 +133,7 @@ class SimulateTest(uData.Dataset):
         return len(self.im_list)
 
     def __getitem__(self, index):
-        im_gt = cv2.imread(self.im_list[index], 1)[:, :, -1]
+        im_gt = cv2.imread(self.im_list[index], 1)[:, :, ::-1]
         im_key = os.path.basename(self.im_list[index]).split('.')[0]
         C = im_gt.shape[2]
 
