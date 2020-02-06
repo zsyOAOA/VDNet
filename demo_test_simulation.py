@@ -67,9 +67,11 @@ if use_gpu:
 else:
     print('Begin Testing on CPU')
 with torch.autograd.set_grad_enabled(False):
-    tic = time.time()
+    torch.cuda.synchronize()
+    tic = time.perf_counter()
     phi_Z = net(im_noisy, 'test')
-    toc = time.time()
+    torch.cuda.synchronize()
+    toc = time.perf_counter()
     err = phi_Z.cpu().numpy()
 if use_gpu:
     im_noisy = im_noisy.cpu().numpy()
