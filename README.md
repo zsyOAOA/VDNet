@@ -1,5 +1,7 @@
 # VDN
-# Variational Denoising Network: Toward Blind Noise Modeling and Removal (NeurIPS, 2019) [arXiv](https://arxiv.org/pdf/1908.11314v2.pdf)
+# [Variational Denoising Network: Toward Blind Noise Modeling and Removal (NeurIPS, 2019)](https://papers.nips.cc/paper/8446-variational-denoising-network-toward-blind-noise-modeling-and-removal.pdf)
+# [NeurIPS 2019 reproducibility challenge project](https://github.com/AbIsuNav/DD2412_project)
+* [Report](https://github.com/AbIsuNav/DD2412_project/blob/master/ADL_VDN.pdf)
 # Requirements and Dependencies
 * Ubuntu 16.04, cuda 10.0
 * Python 3.6, Pytorch 1.1.0
@@ -56,4 +58,18 @@ dataset and the validation dataset into the floder "sidd_data_path".
 3. Begin training:
 ```
     python train_simulation.py --SIDD_dir sidd_data_path --eps2 1e-6
+```
+
+# Citation
+```
+@incollection{NIPS2019_8446,
+title = {Variational Denoising Network: Toward Blind Noise Modeling and Removal},
+author = {Yue, Zongsheng and Yong, Hongwei and Zhao, Qian and Meng, Deyu and Zhang, Lei},
+booktitle = {Advances in Neural Information Processing Systems 32},
+editor = {H. Wallach and H. Larochelle and A. Beygelzimer and F. d\textquotesingle Alch\'{e}-Buc and E. Fox and R. Garnett},
+pages = {1690--1701},
+year = {2019},
+publisher = {Curran Associates, Inc.},
+url = {http://papers.nips.cc/paper/8446-variational-denoising-network-toward-blind-noise-modeling-and-removal.pdf}
+}
 ```
