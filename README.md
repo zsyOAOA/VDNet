@@ -57,7 +57,7 @@ dataset and the validation dataset into the floder "sidd_data_path".
 ```
 3. Begin training:
 ```
-    python train_simulation.py --SIDD_dir sidd_data_path --eps2 1e-6
+    python train_benchmark.py --SIDD_dir sidd_data_path --eps2 1e-6
 ```
 
 # Citation
