@@ -10,7 +10,7 @@ from skimage.measure import compare_psnr, compare_ssim
 from skimage import img_as_ubyte
 import numpy as np
 import sys
-from math import floor
+from math import floor, sqrt
 
 def ssim_index(im1, im2):
     '''
@@ -120,7 +120,7 @@ def generate_gauss_kernel_mix(H, W):
     XX, YY = np.meshgrid(np.arange(0, W), np.arange(0,H))
     XX = XX[:, :, np.newaxis].astype(np.float32)
     YY = YY[:, :, np.newaxis].astype(np.float32)
-    ZZ = 1./(2*np.pi*scale**2) * np.exp( (-(XX-centerW)**2-(YY-centerH)**2)/(2*scale**2) )
+    ZZ = 1./(sqrt(2*np.pi)*scale) * np.exp( (-(XX-centerW)**2-(YY-centerH)**2)/(2*scale**2) )
     # ZZ *= prob
     # out = ZZ.sum(axis=2, keepdims=False)
     out = ZZ.sum(axis=2, keepdims=False) / K
