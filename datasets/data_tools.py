@@ -5,7 +5,6 @@
 import cv2
 import numpy as np
 import random
-from math import sqrt
 
 def data_augmentation(image, mode):
     '''
@@ -78,5 +77,5 @@ def gaussian_kernel(H, W, center, scale):
     centerH = center[0]
     centerW = center[1]
     XX, YY = np.meshgrid(np.arange(W), np.arange(H))
-    ZZ = 1 / (sqrt(2*np.pi)*scale) * np.exp( (-(XX-centerH)**2-(YY-centerW)**2)/(2*scale**2) )
+    ZZ = 1 / (2*np.pi*scale**2) * np.exp( (-(XX-centerH)**2-(YY-centerW)**2)/(2*scale**2) )
     return ZZ
