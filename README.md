@@ -1,5 +1,6 @@
 # VDN
-# [Variational Denoising Network: Toward Blind Noise Modeling and Removal (NeurIPS, 2019)](https://papers.nips.cc/paper/8446-variational-denoising-network-toward-blind-noise-modeling-and-removal.pdf)
+# Variational Denoising Network: Toward Blind Noise Modeling and Removal \(NeurIPS, 2019, [paper](https://papers.nips.cc/paper/8446-variational-denoising-network-toward-blind-noise-modeling-and-removal.pdf)\)
+Note that this work has been extended to a general image restoration method \((paper)[https://arxiv.org/pdf/2008.10796.pdf], (code)[https://github.com/zsyOAOA/VIRNet]\).
 # [NeurIPS 2019 reproducibility challenge project](https://github.com/AbIsuNav/DD2412_project)
 * [Report](https://github.com/AbIsuNav/DD2412_project/blob/master/ADL_VDN.pdf)
 # Requirements and Dependencies
